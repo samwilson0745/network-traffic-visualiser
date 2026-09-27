@@ -67,3 +67,6 @@ aggregation window and flow idle timeout are configurable on the backend
 - `collector` uses `network_mode: host`, which on Docker Desktop runs
   inside the Docker VM's network namespace — this is what lets it see the
   Docker bridge traffic between the other containers and the internet.
+
+
+<img width="1404" height="800" alt="Screenshot 2026-09-28 at 2 20 08 AM" src="https://github.com/user-attachments/assets/6da5b846-cc55-420d-b0d2-4372c17ac549" />
