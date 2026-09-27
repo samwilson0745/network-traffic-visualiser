@@ -1,0 +1,89 @@
+networks:
+  traffic-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
+
+services:
+  system-1:
+    build: ./system-1
+    container_name: system-1
+    environment:
+      - TARGETS=https://example.com,https://httpbin.org/get
+      - INTERVAL_SECONDS=2
+    networks:
+      traffic-net:
+        ipv4_address: 172.31.0.11
+    restart: unless-stopped
+
+  system-2:
+    build: ./system-2
+    container_name: system-2
+    environment:
+      - TARGETS=https://api.github.com,https://httpbin.org/uuid
+      - INTERVAL_SECONDS=3
+    networks:
+      traffic-net:
+        ipv4_address: 172.31.0.12
+    restart: unless-stopped
+
+  system-3:
+    build: ./system-3
+    container_name: system-3
+    environment:
+      - HOSTS=example.com,httpbin.org,api.github.com
+      - INTERVAL_SECONDS=4
+    networks:
+      traffic-net:
+        ipv4_address: 172.31.0.13
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: backend
+    environment:
+      - SYSTEM_1_IP=172.31.0.11
+      - SYSTEM_1_NAME=system-1
+      - SYSTEM_2_IP=172.31.0.12
+      - SYSTEM_2_NAME=system-2
+      - SYSTEM_3_IP=172.31.0.13
+      - SYSTEM_3_NAME=system-3
+      - AGGREGATION_WINDOW_MS=1000
+      - FLOW_IDLE_TIMEOUT_SECONDS=30
+    ports:
+      - "8080:8080"
+    networks:
+      traffic-net:
+        ipv4_address: 172.31.0.30
+    restart: unless-stopped
+
+  collector:
+    build: ./collector
+    container_name: collector
+    depends_on:
+      - backend
+    environment:
+      - CAPTURE_INTERFACE=any
+      - CAPTURE_FILTER=net 172.31.0.0/24
+      - BACKEND_WS_URL=ws://localhost:8080/ingest
+    network_mode: host
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_BACKEND_WS_URL: ws://localhost:8080/ws
+    container_name: frontend
+    ports:
+      - "3000:80"
+    networks:
+      traffic-net:
+        ipv4_address: 172.31.0.40
+    depends_on:
+      - backend
+    restart: unless-stopped
